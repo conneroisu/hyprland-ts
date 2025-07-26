@@ -153,48 +153,62 @@ export interface HyprlandEventData {
 
 /** Specific event types */
 export interface HyprlandWindowEvent extends HyprlandEventData {
-  readonly event: 'activewindow' | 'activewindowv2' | 'openwindow' | 'closewindow' | 'movewindow' | 'movewindowv2';
+  readonly event:
+    | "activewindow"
+    | "activewindowv2"
+    | "openwindow"
+    | "closewindow"
+    | "movewindow"
+    | "movewindowv2";
   readonly data: string;
 }
 
 export interface HyprlandWorkspaceEvent extends HyprlandEventData {
-  readonly event: 'workspace' | 'workspacev2' | 'createworkspace' | 'createworkspacev2' | 'destroyworkspace' | 'destroyworkspacev2' | 'moveworkspace' | 'moveworkspacev2';
+  readonly event:
+    | "workspace"
+    | "workspacev2"
+    | "createworkspace"
+    | "createworkspacev2"
+    | "destroyworkspace"
+    | "destroyworkspacev2"
+    | "moveworkspace"
+    | "moveworkspacev2";
   readonly data: string;
 }
 
 export interface HyprlandMonitorEvent extends HyprlandEventData {
-  readonly event: 'monitoradded' | 'monitorremoved' | 'focusedmon';
+  readonly event: "monitoradded" | "monitorremoved" | "focusedmon";
   readonly data: string;
 }
 
 export interface HyprlandLayoutEvent extends HyprlandEventData {
-  readonly event: 'changefloatingmode' | 'fullscreen';
+  readonly event: "changefloatingmode" | "fullscreen";
   readonly data: string;
 }
 
 export interface HyprlandKeyboardEvent extends HyprlandEventData {
-  readonly event: 'activelayout';
+  readonly event: "activelayout";
   readonly data: string;
 }
 
 export interface HyprlandUrgentEvent extends HyprlandEventData {
-  readonly event: 'urgent';
+  readonly event: "urgent";
   readonly data: string;
 }
 
 export interface HyprlandSubmapEvent extends HyprlandEventData {
-  readonly event: 'submap';
+  readonly event: "submap";
   readonly data: string;
 }
 
 /** Union of all event types */
-export type HyprlandEvent = 
-  | HyprlandWindowEvent 
-  | HyprlandWorkspaceEvent 
-  | HyprlandMonitorEvent 
-  | HyprlandLayoutEvent 
-  | HyprlandKeyboardEvent 
-  | HyprlandUrgentEvent 
+export type HyprlandEvent =
+  | HyprlandWindowEvent
+  | HyprlandWorkspaceEvent
+  | HyprlandMonitorEvent
+  | HyprlandLayoutEvent
+  | HyprlandKeyboardEvent
+  | HyprlandUrgentEvent
   | HyprlandSubmapEvent;
 
 // ============================================================================
@@ -202,56 +216,56 @@ export type HyprlandEvent =
 // ============================================================================
 
 /** Available hyprctl commands */
-export type HyprCtlCommand = 
-  | 'clients'
-  | 'workspaces'
-  | 'monitors'
-  | 'devices'
-  | 'layers'
-  | 'splash'
-  | 'getoption'
-  | 'cursorpos'
-  | 'animations'
-  | 'instances'
-  | 'layouts'
-  | 'configerrors'
-  | 'rollinglog'
-  | 'globalshortcuts'
-  | 'binds'
-  | 'activewindow'
-  | 'activeworkspace';
+export type HyprCtlCommand =
+  | "clients"
+  | "workspaces"
+  | "monitors"
+  | "devices"
+  | "layers"
+  | "splash"
+  | "getoption"
+  | "cursorpos"
+  | "animations"
+  | "instances"
+  | "layouts"
+  | "configerrors"
+  | "rollinglog"
+  | "globalshortcuts"
+  | "binds"
+  | "activewindow"
+  | "activeworkspace";
 
 /** HyprCtl dispatch commands */
 export type HyprCtlDispatchCommand =
-  | 'exec'
-  | 'killactive'
-  | 'closewindow'
-  | 'workspace'
-  | 'movetoworkspace'
-  | 'movetoworkspacesilent'
-  | 'togglefloating'
-  | 'fullscreen'
-  | 'fakefullscreen'
-  | 'movefocus'
-  | 'movewindow'
-  | 'resizewindow'
-  | 'centerwindow'
-  | 'focuswindow'
-  | 'focusmonitor'
-  | 'movecurrentworkspacetomonitor'
-  | 'moveworkspacetomonitor'
-  | 'togglespecialworkspace'
-  | 'movetoworkspace'
-  | 'pin'
-  | 'splitratio'
-  | 'toggleopaque'
-  | 'movecursortocorner'
-  | 'workspaceopt'
-  | 'exit';
+  | "exec"
+  | "killactive"
+  | "closewindow"
+  | "workspace"
+  | "movetoworkspace"
+  | "movetoworkspacesilent"
+  | "togglefloating"
+  | "fullscreen"
+  | "fakefullscreen"
+  | "movefocus"
+  | "movewindow"
+  | "resizewindow"
+  | "centerwindow"
+  | "focuswindow"
+  | "focusmonitor"
+  | "movecurrentworkspacetomonitor"
+  | "moveworkspacetomonitor"
+  | "togglespecialworkspace"
+  | "movetoworkspace"
+  | "pin"
+  | "splitratio"
+  | "toggleopaque"
+  | "movecursortocorner"
+  | "workspaceopt"
+  | "exit";
 
 /** HyprCtl request structure */
 export interface HyprCtlRequest {
-  readonly command: HyprCtlCommand | 'dispatch';
+  readonly command: HyprCtlCommand | "dispatch";
   readonly args?: readonly string[];
   readonly dispatchCommand?: HyprCtlDispatchCommand;
   readonly json?: boolean;
@@ -260,8 +274,8 @@ export interface HyprCtlRequest {
 /** HyprCtl response structure */
 export interface HyprCtlResponse<T = unknown> {
   readonly success: boolean;
-  readonly data?: T;
-  readonly error?: string;
+  readonly data: T | undefined;
+  readonly error: string | undefined;
 }
 
 // ============================================================================
@@ -269,32 +283,32 @@ export interface HyprCtlResponse<T = unknown> {
 // ============================================================================
 
 /** IPC socket types */
-export type SocketType = 'command' | 'event';
+export type SocketType = "command" | "event";
 
 /** IPC message structure */
 export interface IPCMessage {
-  readonly type: 'request' | 'response' | 'event';
+  readonly type: "request" | "response" | "event";
   readonly payload: unknown;
   readonly timestamp?: number;
 }
 
 /** IPC request message */
 export interface IPCRequest extends IPCMessage {
-  readonly type: 'request';
+  readonly type: "request";
   readonly payload: HyprCtlRequest;
   readonly id?: string;
 }
 
 /** IPC response message */
 export interface IPCResponse extends IPCMessage {
-  readonly type: 'response';
+  readonly type: "response";
   readonly payload: HyprCtlResponse;
   readonly id?: string;
 }
 
 /** IPC event message */
 export interface IPCEvent extends IPCMessage {
-  readonly type: 'event';
+  readonly type: "event";
   readonly payload: HyprlandEvent;
 }
 

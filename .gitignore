@@ -50,3 +50,4 @@ build
 target
 zig-out
 zig-cache
+dist
