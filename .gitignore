@@ -44,3 +44,9 @@ result
 .vscode
 .idea
 .ccls-cache
+node_modules
+dist
+build
+target
+zig-out
+zig-cache
