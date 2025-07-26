@@ -1,7 +1,7 @@
 ---
 id: task-002
 title: Define core TypeScript type definitions
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-07-26'
 updated_date: '2025-07-26'
