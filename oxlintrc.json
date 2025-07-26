@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "typescript": "error",
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "style": "error",
+    "nursery": "error",
+    "security": "error"
+  },
+  "env": {
+    "browser": false,
+    "node": true,
+    "es2022": true
+  },
+  "globals": {
+    "console": "readonly",
+    "process": "readonly",
+    "Buffer": "readonly"
+  }
+}

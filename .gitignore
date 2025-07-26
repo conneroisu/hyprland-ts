@@ -39,3 +39,8 @@
 
 # debug information files
 *.dwo
+.direnv
+result
+.vscode
+.idea
+.ccls-cache
