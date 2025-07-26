@@ -4,10 +4,12 @@ title: Define core TypeScript type definitions
 status: To Do
 assignee: []
 created_date: '2025-07-26'
+updated_date: '2025-07-26'
 labels:
   - types
   - core
-dependencies: []
+dependencies:
+  - task-001
 priority: high
 ---
 
@@ -17,10 +19,15 @@ Create comprehensive TypeScript type definitions for Hyprland data structures, e
 
 ## Acceptance Criteria
 
-- [ ] Window type definition with all properties from Hyprland
-- [ ] Workspace type definition with complete structure
-- [ ] Monitor type definition including all display properties
-- [ ] Event type definitions for all Hyprland events
-- [ ] HyprCtl command and response type definitions
-- [ ] Configuration option type definitions
-- [ ] All types exported from a central types module
+- [ ] Window type definition with all properties from Hyprland API
+- [ ] Workspace type definition with complete structure and metadata
+- [ ] Monitor type definition including all display properties and capabilities
+- [ ] Event type definitions for all Hyprland event types with proper payloads
+- [ ] HyprCtl command and response type definitions with parameter validation
+- [ ] Configuration option type definitions matching Hyprland config schema
+- [ ] IPC protocol message types for socket communication
+- [ ] Runtime type validation utilities for API responses
+- [ ] Version compatibility annotations for type evolution
+- [ ] All types exported from a central types module with proper documentation
+- [ ] Type definitions tested against actual Hyprland API responses
+- [ ] Dependency on task-001 infrastructure setup completion
