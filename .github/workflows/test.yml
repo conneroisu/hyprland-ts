@@ -1,1 +1,264 @@
-name: Test Suite\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n    branches: [ main, develop ]\n  schedule:\n    # Run tests daily at 2 AM UTC\n    - cron: '0 2 * * *'\n\njobs:\n  test:\n    name: Run Tests\n    runs-on: ubuntu-latest\n    \n    strategy:\n      matrix:\n        node-version: [18.x, 20.x, 22.x]\n        \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run linting\n      run: npm run lint\n      \n    - name: Run type checking\n      run: npm run type-check\n      \n    - name: Run unit tests\n      run: npm run test:run\n      \n    - name: Run tests with coverage\n      run: npm run test:coverage\n      \n    - name: Upload coverage to Codecov\n      uses: codecov/codecov-action@v4\n      with:\n        file: ./coverage/lcov.info\n        flags: unittests\n        name: codecov-umbrella\n        fail_ci_if_error: false\n        \n    - name: Upload test results\n      uses: actions/upload-artifact@v4\n      if: always()\n      with:\n        name: test-results-${{ matrix.node-version }}\n        path: |\n          test-results.json\n          test-results.html\n          coverage/\n        retention-days: 30\n        \n  performance:\n    name: Performance Tests\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run performance tests\n      run: npm test -- --run src/performance.test.ts\n      \n    - name: Upload performance results\n      uses: actions/upload-artifact@v4\n      with:\n        name: performance-results\n        path: test-results.json\n        retention-days: 30\n        \n  property-based:\n    name: Property-Based Tests\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run property-based tests\n      run: npm test -- --run src/property.test.ts\n      \n    - name: Upload property test results\n      uses: actions/upload-artifact@v4\n      with:\n        name: property-test-results\n        path: test-results.json\n        retention-days: 30\n        \n  edge-cases:\n    name: Edge Case Tests\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run edge case tests\n      run: npm test -- --run src/edge-cases.test.ts\n      \n    - name: Upload edge case results\n      uses: actions/upload-artifact@v4\n      with:\n        name: edge-case-results\n        path: test-results.json\n        retention-days: 30\n        \n  integration:\n    name: Integration Tests\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run integration tests\n      run: npm test -- --run src/integration.test.ts\n      \n    - name: Upload integration results\n      uses: actions/upload-artifact@v4\n      with:\n        name: integration-results\n        path: test-results.json\n        retention-days: 30\n        \n  build-test:\n    name: Build Test\n    runs-on: ubuntu-latest\n    needs: test\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Build package\n      run: npm run build\n      \n    - name: Test built package\n      run: |\n        # Test that the built package can be imported\n        node -e \"const pkg = require('./dist/index.cjs'); console.log('CJS import successful');\"\n        node --input-type=module -e \"import('./dist/index.js').then(() => console.log('ESM import successful'));\"\n        \n    - name: Upload build artifacts\n      uses: actions/upload-artifact@v4\n      with:\n        name: build-artifacts\n        path: dist/\n        retention-days: 7\n        \n  security:\n    name: Security Audit\n    runs-on: ubuntu-latest\n    \n    steps:\n    - name: Checkout code\n      uses: actions/checkout@v4\n      \n    - name: Setup Node.js\n      uses: actions/setup-node@v4\n      with:\n        node-version: '20.x'\n        cache: 'npm'\n        \n    - name: Install dependencies\n      run: npm ci\n      \n    - name: Run security audit\n      run: npm audit --audit-level=moderate\n      \n    - name: Run npm audit fix (if needed)\n      run: npm audit fix --dry-run\n      \n  summary:\n    name: Test Summary\n    runs-on: ubuntu-latest\n    needs: [test, performance, property-based, edge-cases, integration, build-test, security]\n    if: always()\n    \n    steps:\n    - name: Download all artifacts\n      uses: actions/download-artifact@v4\n      \n    - name: Create test summary\n      run: |\n        echo \"# Test Suite Summary\" >> $GITHUB_STEP_SUMMARY\n        echo \"\" >> $GITHUB_STEP_SUMMARY\n        echo \"## Test Results\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Unit Tests: ${{ needs.test.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Performance Tests: ${{ needs.performance.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Property-Based Tests: ${{ needs.property-based.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Edge Case Tests: ${{ needs.edge-cases.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Integration Tests: ${{ needs.integration.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Build Test: ${{ needs.build-test.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"- Security Audit: ${{ needs.security.result }}\" >> $GITHUB_STEP_SUMMARY\n        echo \"\" >> $GITHUB_STEP_SUMMARY\n        echo \"All test artifacts have been uploaded and are available for download.\" >> $GITHUB_STEP_SUMMARY"
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Run type checking
+      run: npm run type-check
+      
+    - name: Run unit tests
+      run: npm run test:run
+      
+    - name: Run tests with coverage
+      run: npm run test:coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: ${{ !env.ACT }}
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: ${{ always() && !env.ACT }}
+      with:
+        name: test-results-${{ matrix.node-version }}
+        path: |
+          test-results.json
+          test-results.html
+          coverage/
+        retention-days: 30
+        
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run performance tests
+      run: npm test -- --run src/performance.test.ts
+      
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      if: ${{ !env.ACT }}
+      with:
+        name: performance-results
+        path: test-results.json
+        retention-days: 30
+        
+  property-based:
+    name: Property-Based Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run property-based tests
+      run: npm test -- --run src/property.test.ts
+      
+    - name: Upload property test results
+      uses: actions/upload-artifact@v4
+      if: ${{ !env.ACT }}
+      with:
+        name: property-test-results
+        path: test-results.json
+        retention-days: 30
+        
+  edge-cases:
+    name: Edge Case Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run edge case tests
+      run: npm test -- --run src/edge-cases.test.ts
+      
+    - name: Upload edge case results
+      uses: actions/upload-artifact@v4
+      if: ${{ !env.ACT }}
+      with:
+        name: edge-case-results
+        path: test-results.json
+        retention-days: 30
+        
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run integration tests
+      run: npm test -- --run src/integration.test.ts
+      
+    - name: Upload integration results
+      uses: actions/upload-artifact@v4
+      if: ${{ !env.ACT }}
+      with:
+        name: integration-results
+        path: test-results.json
+        retention-days: 30
+        
+  build-test:
+    name: Build Test
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build package
+      run: npm run build
+      
+    - name: Test built package
+      run: |
+        # Test that the built package can be imported
+        node -e "const pkg = require('./dist/index.cjs'); console.log('CJS import successful');"
+        node --input-type=module -e "import('./dist/index.js').then(() => console.log('ESM import successful'));"
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      if: ${{ !env.ACT }}
+      with:
+        name: build-artifacts
+        path: dist/
+        retention-days: 7
+        
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run security audit
+      run: npm audit --audit-level=moderate
+      
+    - name: Run npm audit fix (if needed)
+      run: npm audit fix --dry-run
+      
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test, performance, property-based, edge-cases, integration, build-test, security]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      if: ${{ !env.ACT }}
+      
+    - name: Create test summary
+      run: |
+        echo "# Test Suite Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Unit Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance Tests: ${{ needs.performance.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Property-Based Tests: ${{ needs.property-based.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Edge Case Tests: ${{ needs.edge-cases.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Integration Tests: ${{ needs.integration.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Build Test: ${{ needs.build-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Security Audit: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All test artifacts have been uploaded and are available for download." >> $GITHUB_STEP_SUMMARY

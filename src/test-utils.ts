@@ -4,6 +4,7 @@
  */
 
 import type {
+  HyprCtlCommand,
   HyprCtlRequest,
   HyprCtlResponse,
   HyprlandEvent,
@@ -158,11 +159,11 @@ export function createMonitorSetup(): HyprlandMonitor[] {
 
 /** Generate realistic event data */
 export function createMockEvent(
-  eventType = "activewindow",
+  eventType: HyprlandEvent["event"] = "activewindow",
   data = "0x5649a1b4f380,Mozilla Firefox"
 ): HyprlandEvent {
   return {
-    event: eventType as any,
+    event: eventType,
     data,
   };
 }
@@ -184,12 +185,12 @@ export function createEventSequence(): HyprlandEvent[] {
 
 /** Generate realistic HyprCtl request */
 export function createMockHyprCtlRequest(
-  command = "clients",
+  command: HyprCtlCommand = "clients",
   args: string[] = [],
   json = true
 ): HyprCtlRequest {
   return {
-    command: command as any,
+    command: command,
     args,
     json,
   };
@@ -203,13 +204,12 @@ export function createMockHyprCtlResponse<T>(data: T, success = true): HyprCtlRe
       data,
       error: undefined,
     };
-  } else {
-    return {
-      success: false,
-      data: undefined,
-      error: "Mock error message",
-    } as HyprCtlResponse<T>;
   }
+  return {
+    success: false,
+    data: undefined,
+    error: "Mock error message",
+  } as HyprCtlResponse<T>;
 }
 
 // ============================================================================\n// Edge Cases and Error Scenarios\n// ============================================================================\n\n/** Generate invalid window data for error testing */\nexport function createInvalidWindowData(): Record<string, unknown>[] {\n  return [\n    {}, // Empty object\n    { address: 'invalid' }, // Missing required fields\n    { \n      address: '0x123',\n      mapped: 'not a boolean', // Wrong type\n      at: [100], // Wrong array length\n    },\n    {\n      address: '0x123',\n      mapped: true,\n      hidden: false,\n      at: [100, 200],\n      size: [800, 600],\n      workspace: { invalid: 'workspace' }, // Invalid workspace\n      floating: false,\n      monitor: 'not a number', // Wrong type\n      class: 'test',\n      title: 'test',\n      pid: 'not a number', // Wrong type\n      xwayland: false,\n      pinned: false,\n      fullscreen: false,\n      fullscreenMode: 0,\n      focusHistoryID: 0,\n    },\n    null, // Null value\n    'string', // Wrong type entirely\n    [], // Array instead of object\n  ];\n}\n\n/** Generate edge case window configurations */\nexport function createEdgeCaseWindows(): HyprlandWindow[] {\n  return [\n    // Floating window\n    createMockWindow({\n      floating: true,\n      at: [100, 100] as const,\n      size: [400, 300] as const,\n    }),\n    // Fullscreen window\n    createMockWindow({\n      fullscreen: true,\n      fullscreenMode: 1,\n      at: [0, 0] as const,\n      size: [3840, 2160] as const,\n    }),\n    // Hidden window\n    createMockWindow({\n      hidden: true,\n      mapped: false,\n    }),\n    // Xwayland window\n    createMockWindow({\n      xwayland: true,\n      class: 'legacy-app',\n      title: 'Legacy X11 Application',\n    }),\n    // Pinned window\n    createMockWindow({\n      pinned: true,\n      floating: true,\n      at: [50, 50] as const,\n      size: [200, 150] as const,\n    }),\n    // Special workspace window\n    createMockWindow({\n      workspace: createMockWorkspaceInfo({ id: -99, name: 'special:scratchpad' }),\n    }),\n  ];\n}\n\n/** Generate performance test data */\nexport function createLargeDataset(size: number): {\n  windows: HyprlandWindow[];\n  workspaces: HyprlandWorkspace[];\n  monitors: HyprlandMonitor[];\n} {\n  const windows = Array.from({ length: size }, (_, i) =>\n    createMockWindow({\n      address: `0x${i.toString(16).padStart(8, '0')}`,\n      title: `Window ${i}`,\n      pid: 1000 + i,\n      workspace: createMockWorkspaceInfo({ id: (i % 10) + 1 }),\n    })\n  );\n  \n  const workspaces = Array.from({ length: Math.min(size / 10, 20) }, (_, i) =>\n    createMockWorkspace({\n      id: i + 1,\n      name: `workspace-${i + 1}`,\n      windows: Math.floor(size / 20),\n    })\n  );\n  \n  const monitors = Array.from({ length: Math.min(size / 100, 5) }, (_, i) =>\n    createMockMonitor({\n      id: i,\n      name: `MONITOR-${i}`,\n      activeWorkspace: createMockWorkspaceInfo({ id: i + 1 }),\n    })\n  );\n  \n  return { windows, workspaces, monitors };\n}\n\n// ============================================================================\n// Test Assertion Helpers\n// ============================================================================\n\n/** Assert that a window has valid structure */\nexport function assertValidWindow(window: unknown): asserts window is HyprlandWindow {\n  if (typeof window !== 'object' || window === null) {\n    throw new Error('Window must be an object');\n  }\n  \n  const w = window as Record<string, unknown>;\n  \n  if (typeof w.address !== 'string') {\n    throw new Error('Window address must be a string');\n  }\n  \n  if (typeof w.mapped !== 'boolean') {\n    throw new Error('Window mapped must be a boolean');\n  }\n  \n  if (!Array.isArray(w.at) || w.at.length !== 2) {\n    throw new Error('Window at must be an array of 2 numbers');\n  }\n}\n\n/** Check if two windows are equivalent for testing */\nexport function windowsEqual(a: HyprlandWindow, b: HyprlandWindow): boolean {\n  return (\n    a.address === b.address &&\n    a.mapped === b.mapped &&\n    a.hidden === b.hidden &&\n    a.at[0] === b.at[0] &&\n    a.at[1] === b.at[1] &&\n    a.size[0] === b.size[0] &&\n    a.size[1] === b.size[1] &&\n    a.workspace.id === b.workspace.id &&\n    a.workspace.name === b.workspace.name &&\n    a.floating === b.floating &&\n    a.monitor === b.monitor &&\n    a.class === b.class &&\n    a.title === b.title &&\n    a.pid === b.pid &&\n    a.xwayland === b.xwayland &&\n    a.pinned === b.pinned &&\n    a.fullscreen === b.fullscreen &&\n    a.fullscreenMode === b.fullscreenMode &&\n    a.focusHistoryID === b.focusHistoryID\n  );\n}\n\n// ============================================================================\n// Mock IPC Functions\n// ============================================================================\n\n/** Mock socket connection for testing */\nexport class MockSocket {\n  private listeners: Map<string, ((data: string) => void)[]> = new Map();\n  private connected = false;\n  \n  connect(): Promise<void> {\n    return new Promise((resolve) => {\n      setTimeout(() => {\n        this.connected = true;\n        resolve();\n      }, 10);\n    });\n  }\n  \n  disconnect(): void {\n    this.connected = false;\n    this.listeners.clear();\n  }\n  \n  send(data: string): Promise<string> {\n    if (!this.connected) {\n      throw new Error('Socket not connected');\n    }\n    \n    // Simulate processing delay\n    return new Promise((resolve) => {\n      setTimeout(() => {\n        resolve(`Response to: ${data}`);\n      }, 5);\n    });\n  }\n  \n  on(event: string, callback: (data: string) => void): void {\n    if (!this.listeners.has(event)) {\n      this.listeners.set(event, []);\n    }\n    this.listeners.get(event)!.push(callback);\n  }\n  \n  emit(event: string, data: string): void {\n    const callbacks = this.listeners.get(event) || [];\n    callbacks.forEach(callback => callback(data));\n  }\n  \n  isConnected(): boolean {\n    return this.connected;\n  }\n}\n\n/** Create a mock socket for testing */\nexport function createMockSocket(): MockSocket {\n  return new MockSocket();\n}"

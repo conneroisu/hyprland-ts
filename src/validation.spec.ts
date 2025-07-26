@@ -43,7 +43,7 @@ describe("Validation Functions", () => {
       expect(result.success).toBe(false);
       expect(result.data).toBeUndefined();
       expect(result.errors).toBeDefined();
-      expect(result.errors!.length).toBeGreaterThan(0);
+      expect(result.errors?.length).toBeGreaterThan(0);
     });
 
     test("validates window with custom properties", () => {
@@ -149,7 +149,8 @@ describe("Type Guards", () => {
 
     test("validates all required properties", () => {
       const invalidWindow = createMockWindow();
-      delete (invalidWindow as any).address;
+      // Remove a required property to make the window invalid
+      (invalidWindow as Record<string, unknown>).address = undefined;
 
       expect(isHyprlandWindow(invalidWindow)).toBe(false);
     });

@@ -39,8 +39,12 @@ function isBoolean(value: unknown): value is boolean {
 
 /** Check if value is an array of numbers with specific length */
 function isNumberArray(value: unknown, length?: number): value is readonly number[] {
-  if (!Array.isArray(value)) return false;
-  if (length !== undefined && value.length !== length) return false;
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  if (length !== undefined && value.length !== length) {
+    return false;
+  }
   return value.every(isNumber);
 }
 
@@ -70,14 +74,18 @@ function createFailureResult<T>(errors: readonly string[]): ValidationResult<T> 
 export const isHyprlandWorkspaceInfo: TypePredicate<HyprlandWorkspaceInfo> = (
   value
 ): value is HyprlandWorkspaceInfo => {
-  if (!isObject(value)) return false;
+  if (!isObject(value)) {
+    return false;
+  }
 
   return isNumber(value["id"]) && isString(value["name"]);
 };
 
 /** Type guard for HyprlandWindow */
 export const isHyprlandWindow: TypePredicate<HyprlandWindow> = (value): value is HyprlandWindow => {
-  if (!isObject(value)) return false;
+  if (!isObject(value)) {
+    return false;
+  }
 
   return (
     isString(value["address"]) &&
@@ -104,7 +112,9 @@ export const isHyprlandWindow: TypePredicate<HyprlandWindow> = (value): value is
 export const isHyprlandWorkspace: TypePredicate<HyprlandWorkspace> = (
   value
 ): value is HyprlandWorkspace => {
-  if (!isObject(value)) return false;
+  if (!isObject(value)) {
+    return false;
+  }
 
   return (
     isNumber(value["id"]) &&
@@ -122,7 +132,9 @@ export const isHyprlandWorkspace: TypePredicate<HyprlandWorkspace> = (
 export const isHyprlandMonitor: TypePredicate<HyprlandMonitor> = (
   value
 ): value is HyprlandMonitor => {
-  if (!isObject(value)) return false;
+  if (!isObject(value)) {
+    return false;
+  }
 
   return (
     isNumber(value["id"]) &&
@@ -153,7 +165,9 @@ export const isHyprlandMonitor: TypePredicate<HyprlandMonitor> = (
 
 /** Type guard for HyprlandEvent */
 export const isHyprlandEvent: TypePredicate<HyprlandEvent> = (value): value is HyprlandEvent => {
-  if (!isObject(value)) return false;
+  if (!isObject(value)) {
+    return false;
+  }
 
   return isString(value["event"]) && value["data"] !== undefined;
 };
@@ -170,11 +184,21 @@ export const validateHyprlandWindow = (value: unknown): ValidationResult<Hyprlan
     return createFailureResult(["Value must be an object"]);
   }
 
-  if (!isString(value["address"])) errors.push("address must be a string");
-  if (!isBoolean(value["mapped"])) errors.push("mapped must be a boolean");
-  if (!isBoolean(value["hidden"])) errors.push("hidden must be a boolean");
-  if (!isNumberArray(value["at"], 2)) errors.push("at must be an array of 2 numbers");
-  if (!isNumberArray(value["size"], 2)) errors.push("size must be an array of 2 numbers");
+  if (!isString(value["address"])) {
+    errors.push("address must be a string");
+  }
+  if (!isBoolean(value["mapped"])) {
+    errors.push("mapped must be a boolean");
+  }
+  if (!isBoolean(value["hidden"])) {
+    errors.push("hidden must be a boolean");
+  }
+  if (!isNumberArray(value["at"], 2)) {
+    errors.push("at must be an array of 2 numbers");
+  }
+  if (!isNumberArray(value["size"], 2)) {
+    errors.push("size must be an array of 2 numbers");
+  }
 
   if (!isObject(value["workspace"])) {
     errors.push("workspace must be an object");
@@ -182,16 +206,36 @@ export const validateHyprlandWindow = (value: unknown): ValidationResult<Hyprlan
     errors.push("workspace must be a valid HyprlandWorkspaceInfo");
   }
 
-  if (!isBoolean(value["floating"])) errors.push("floating must be a boolean");
-  if (!isNumber(value["monitor"])) errors.push("monitor must be a number");
-  if (!isString(value["class"])) errors.push("class must be a string");
-  if (!isString(value["title"])) errors.push("title must be a string");
-  if (!isNumber(value["pid"])) errors.push("pid must be a number");
-  if (!isBoolean(value["xwayland"])) errors.push("xwayland must be a boolean");
-  if (!isBoolean(value["pinned"])) errors.push("pinned must be a boolean");
-  if (!isBoolean(value["fullscreen"])) errors.push("fullscreen must be a boolean");
-  if (!isNumber(value["fullscreenMode"])) errors.push("fullscreenMode must be a number");
-  if (!isNumber(value["focusHistoryID"])) errors.push("focusHistoryID must be a number");
+  if (!isBoolean(value["floating"])) {
+    errors.push("floating must be a boolean");
+  }
+  if (!isNumber(value["monitor"])) {
+    errors.push("monitor must be a number");
+  }
+  if (!isString(value["class"])) {
+    errors.push("class must be a string");
+  }
+  if (!isString(value["title"])) {
+    errors.push("title must be a string");
+  }
+  if (!isNumber(value["pid"])) {
+    errors.push("pid must be a number");
+  }
+  if (!isBoolean(value["xwayland"])) {
+    errors.push("xwayland must be a boolean");
+  }
+  if (!isBoolean(value["pinned"])) {
+    errors.push("pinned must be a boolean");
+  }
+  if (!isBoolean(value["fullscreen"])) {
+    errors.push("fullscreen must be a boolean");
+  }
+  if (!isNumber(value["fullscreenMode"])) {
+    errors.push("fullscreenMode must be a number");
+  }
+  if (!isNumber(value["focusHistoryID"])) {
+    errors.push("focusHistoryID must be a number");
+  }
 
   if (errors.length > 0) {
     return createFailureResult(errors);
@@ -208,14 +252,30 @@ export const validateHyprlandWorkspace = (value: unknown): ValidationResult<Hypr
     return createFailureResult(["Value must be an object"]);
   }
 
-  if (!isNumber(value["id"])) errors.push("id must be a number");
-  if (!isString(value["name"])) errors.push("name must be a string");
-  if (!isString(value["monitor"])) errors.push("monitor must be a string");
-  if (!isNumber(value["monitorID"])) errors.push("monitorID must be a number");
-  if (!isNumber(value["windows"])) errors.push("windows must be a number");
-  if (!isBoolean(value["hasfullscreen"])) errors.push("hasfullscreen must be a boolean");
-  if (!isString(value["lastwindow"])) errors.push("lastwindow must be a string");
-  if (!isString(value["lastwindowtitle"])) errors.push("lastwindowtitle must be a string");
+  if (!isNumber(value["id"])) {
+    errors.push("id must be a number");
+  }
+  if (!isString(value["name"])) {
+    errors.push("name must be a string");
+  }
+  if (!isString(value["monitor"])) {
+    errors.push("monitor must be a string");
+  }
+  if (!isNumber(value["monitorID"])) {
+    errors.push("monitorID must be a number");
+  }
+  if (!isNumber(value["windows"])) {
+    errors.push("windows must be a number");
+  }
+  if (!isBoolean(value["hasfullscreen"])) {
+    errors.push("hasfullscreen must be a boolean");
+  }
+  if (!isString(value["lastwindow"])) {
+    errors.push("lastwindow must be a string");
+  }
+  if (!isString(value["lastwindowtitle"])) {
+    errors.push("lastwindowtitle must be a string");
+  }
 
   if (errors.length > 0) {
     return createFailureResult(errors);
@@ -232,17 +292,39 @@ export const validateHyprlandMonitor = (value: unknown): ValidationResult<Hyprla
     return createFailureResult(["Value must be an object"]);
   }
 
-  if (!isNumber(value["id"])) errors.push("id must be a number");
-  if (!isString(value["name"])) errors.push("name must be a string");
-  if (!isString(value["description"])) errors.push("description must be a string");
-  if (!isString(value["make"])) errors.push("make must be a string");
-  if (!isString(value["model"])) errors.push("model must be a string");
-  if (!isString(value["serial"])) errors.push("serial must be a string");
-  if (!isNumber(value["width"])) errors.push("width must be a number");
-  if (!isNumber(value["height"])) errors.push("height must be a number");
-  if (!isNumber(value["refreshRate"])) errors.push("refreshRate must be a number");
-  if (!isNumber(value["x"])) errors.push("x must be a number");
-  if (!isNumber(value["y"])) errors.push("y must be a number");
+  if (!isNumber(value["id"])) {
+    errors.push("id must be a number");
+  }
+  if (!isString(value["name"])) {
+    errors.push("name must be a string");
+  }
+  if (!isString(value["description"])) {
+    errors.push("description must be a string");
+  }
+  if (!isString(value["make"])) {
+    errors.push("make must be a string");
+  }
+  if (!isString(value["model"])) {
+    errors.push("model must be a string");
+  }
+  if (!isString(value["serial"])) {
+    errors.push("serial must be a string");
+  }
+  if (!isNumber(value["width"])) {
+    errors.push("width must be a number");
+  }
+  if (!isNumber(value["height"])) {
+    errors.push("height must be a number");
+  }
+  if (!isNumber(value["refreshRate"])) {
+    errors.push("refreshRate must be a number");
+  }
+  if (!isNumber(value["x"])) {
+    errors.push("x must be a number");
+  }
+  if (!isNumber(value["y"])) {
+    errors.push("y must be a number");
+  }
 
   if (!isObject(value["activeWorkspace"])) {
     errors.push("activeWorkspace must be an object");
@@ -256,12 +338,24 @@ export const validateHyprlandMonitor = (value: unknown): ValidationResult<Hyprla
     errors.push("specialWorkspace must be a valid HyprlandWorkspaceInfo");
   }
 
-  if (!isNumberArray(value["reserved"], 4)) errors.push("reserved must be an array of 4 numbers");
-  if (!isNumber(value["scale"])) errors.push("scale must be a number");
-  if (!isNumber(value["transform"])) errors.push("transform must be a number");
-  if (!isBoolean(value["focused"])) errors.push("focused must be a boolean");
-  if (!isBoolean(value["dpmsStatus"])) errors.push("dpmsStatus must be a boolean");
-  if (!isBoolean(value["vrr"])) errors.push("vrr must be a boolean");
+  if (!isNumberArray(value["reserved"], 4)) {
+    errors.push("reserved must be an array of 4 numbers");
+  }
+  if (!isNumber(value["scale"])) {
+    errors.push("scale must be a number");
+  }
+  if (!isNumber(value["transform"])) {
+    errors.push("transform must be a number");
+  }
+  if (!isBoolean(value["focused"])) {
+    errors.push("focused must be a boolean");
+  }
+  if (!isBoolean(value["dpmsStatus"])) {
+    errors.push("dpmsStatus must be a boolean");
+  }
+  if (!isBoolean(value["vrr"])) {
+    errors.push("vrr must be a boolean");
+  }
 
   if (!Array.isArray(value["availableModes"])) {
     errors.push("availableModes must be an array");
