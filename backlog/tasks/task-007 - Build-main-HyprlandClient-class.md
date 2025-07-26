@@ -23,10 +23,7 @@ Create the primary client class that provides a unified interface for all Hyprla
 - [ ] HyprlandClient class with comprehensive constructor accepting configuration options
 - [ ] Integration of command execution and event handling systems with unified interface
 - [ ] Connection management with automatic reconnection and health monitoring
-- [ ] Configuration options for socket paths
-- [ ] timeouts
-- [ ] retry logic
-- [ ] and performance settings
+- [ ] Configuration options for socket paths timeouts retry logic and performance settings
 - [ ] Health monitoring with connection status reporting and diagnostic information
 - [ ] Capability detection to identify supported Hyprland features and version compatibility
 - [ ] Resource management with proper lifecycle handling and memory cleanup
@@ -38,7 +35,5 @@ Create the primary client class that provides a unified interface for all Hyprla
 - [ ] Event subscription management integrated with client lifecycle
 - [ ] Configuration validation to ensure valid client setup parameters
 - [ ] Documentation with comprehensive usage examples and API reference
-- [ ] Unit tests covering client initialization
-- [ ] state management
-- [ ] and error scenarios
+- [ ] Unit tests covering client initialization state management and error scenarios
 - [ ] Integration tests verify end-to-end functionality with actual Hyprland instances
