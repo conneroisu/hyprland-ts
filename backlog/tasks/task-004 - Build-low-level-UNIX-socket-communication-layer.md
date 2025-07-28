@@ -1,10 +1,11 @@
 ---
 id: task-004
 title: Build low-level UNIX socket communication layer
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@connerohnesorge'
 created_date: '2025-07-26'
-updated_date: '2025-07-26'
+updated_date: '2025-07-28'
 labels:
   - core
   - ipc
