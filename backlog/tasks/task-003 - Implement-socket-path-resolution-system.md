@@ -1,10 +1,10 @@
 ---
 id: task-003
 title: Implement socket path resolution system
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-07-26'
-updated_date: '2025-07-26'
+updated_date: '2025-07-28'
 labels:
   - core
   - ipc
@@ -31,3 +31,7 @@ Create a robust system for discovering and connecting to Hyprland IPC sockets us
 - [ ] Performance optimization with socket path caching for repeated lookups
 - [ ] Unit tests verify socket resolution under various environment conditions
 - [ ] Integration tests verify compatibility with actual Hyprland socket naming patterns
+
+## Implementation Plan
+
+1. Create socket discovery utility functions\n2. Implement environment variable resolution (HYPRLAND_INSTANCE_SIGNATURE)\n3. Add XDG_RUNTIME_DIR fallback logic\n4. Implement socket validation and permission checking\n5. Add multi-instance detection and listing\n6. Create typed return interfaces\n7. Add comprehensive error handling\n8. Implement caching for performance\n9. Write unit tests for all scenarios\n10. Write integration tests with mock sockets
