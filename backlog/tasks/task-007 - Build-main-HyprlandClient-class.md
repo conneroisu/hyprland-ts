@@ -1,10 +1,10 @@
 ---
 id: task-007
 title: Build main HyprlandClient class
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-07-26'
-updated_date: '2025-07-26'
+updated_date: '2025-07-28'
 labels:
   - client
   - core
