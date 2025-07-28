@@ -19,18 +19,18 @@ Create a robust system for discovering and connecting to Hyprland IPC sockets us
 
 ## Acceptance Criteria
 
-- [ ] Function correctly resolves socket paths using HYPRLAND_INSTANCE_SIGNATURE environment variable
-- [ ] System falls back to XDG_RUNTIME_DIR when HYPRLAND_INSTANCE_SIGNATURE is not set
-- [ ] Socket path validation ensures sockets exist and have correct permissions
-- [ ] Support for both primary socket (.socket.sock) and event socket (.socket2.sock) discovery
-- [ ] Multi-instance support by detecting and listing all available Hyprland instances
-- [ ] Socket permission verification (readable/writable access)
-- [ ] Discovery logic handles edge cases like missing runtime directories
-- [ ] Error handling provides actionable error messages for socket resolution failures
-- [ ] Function returns typed socket path information including instance metadata
-- [ ] Performance optimization with socket path caching for repeated lookups
-- [ ] Unit tests verify socket resolution under various environment conditions
-- [ ] Integration tests verify compatibility with actual Hyprland socket naming patterns
+- [x] Function correctly resolves socket paths using HYPRLAND_INSTANCE_SIGNATURE environment variable
+- [x] System falls back to XDG_RUNTIME_DIR when HYPRLAND_INSTANCE_SIGNATURE is not set
+- [x] Socket path validation ensures sockets exist and have correct permissions
+- [x] Support for both primary socket (.socket.sock) and event socket (.socket2.sock) discovery
+- [x] Multi-instance support by detecting and listing all available Hyprland instances
+- [x] Socket permission verification (readable/writable access)
+- [x] Discovery logic handles edge cases like missing runtime directories
+- [x] Error handling provides actionable error messages for socket resolution failures
+- [x] Function returns typed socket path information including instance metadata
+- [x] Performance optimization with socket path caching for repeated lookups
+- [x] Unit tests verify socket resolution under various environment conditions
+- [x] Integration tests verify compatibility with actual Hyprland socket naming patterns
 
 ## Implementation Plan
 

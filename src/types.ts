@@ -390,3 +390,89 @@ export type TypePredicate<T> = (value: unknown) => value is T;
 
 /** Type validator function */
 export type TypeValidator<T> = (value: unknown) => ValidationResult<T>;
+
+// ============================================================================
+// Socket Discovery Types
+// ============================================================================
+
+/**
+ * Comprehensive socket information for Hyprland IPC communication.
+ *
+ * Contains all metadata needed to establish and validate socket connections,
+ * including path, existence status, and permission details.
+ */
+export interface SocketInfo {
+  /** Absolute path to the socket file */
+  readonly path: string;
+  /** Socket type (command for sending commands, event for receiving events) */
+  readonly type: SocketType;
+  /** Hyprland instance signature (hex string) that owns this socket */
+  readonly instance: string;
+  /** Whether the socket file exists and is accessible */
+  readonly exists: boolean;
+  /** Detailed permission information for the socket */
+  readonly permissions: SocketPermissions;
+}
+
+/**
+ * Socket file permission details.
+ *
+ * Indicates whether the current process has the necessary permissions
+ * to read from and write to the socket for IPC communication.
+ */
+export interface SocketPermissions {
+  /** Whether the socket can be read (required for receiving responses) */
+  readonly readable: boolean;
+  /** Whether the socket can be written to (required for sending commands) */
+  readonly writable: boolean;
+}
+
+/**
+ * Complete information about a discovered Hyprland instance.
+ *
+ * Represents a single Hyprland process with its associated sockets.
+ * Each instance has a unique hex signature and maintains both command
+ * and event sockets for bidirectional IPC communication.
+ */
+export interface HyprlandInstance {
+  /** Unique hexadecimal signature identifying this Hyprland instance */
+  readonly signature: string;
+  /** Directory path containing this instance's socket files */
+  readonly runtimeDir: string;
+  /** Command socket information for sending requests to Hyprland */
+  readonly commandSocket: SocketInfo;
+  /** Event socket information for receiving events from Hyprland */
+  readonly eventSocket: SocketInfo;
+}
+
+/**
+ * Result of socket discovery operation.
+ *
+ * Contains all discovered Hyprland instances, identifies the active instance
+ * based on environment variables, and provides error information if discovery fails.
+ */
+export interface SocketDiscoveryResult {
+  /** Whether the discovery operation completed successfully */
+  readonly success: boolean;
+  /** Array of all discovered Hyprland instances */
+  readonly instances: readonly HyprlandInstance[];
+  /** The currently active instance (based on HYPRLAND_INSTANCE_SIGNATURE) */
+  readonly activeInstance?: HyprlandInstance | undefined;
+  /** Human-readable error message if discovery failed */
+  readonly error?: string;
+}
+
+/**
+ * Configuration options for socket discovery behavior.
+ *
+ * Controls caching, permission validation, and other discovery parameters
+ * to balance performance and accuracy based on use case requirements.
+ */
+export interface SocketDiscoveryOptions {
+  /** Whether to use caching for improved performance (default: true) */
+  readonly useCache?: boolean;
+  /** Cache timeout in milliseconds (default: 5000) */
+  readonly cacheTimeout?: number;
+  /** Whether to validate socket permissions (default: true) */
+  readonly validatePermissions?: boolean;
+}

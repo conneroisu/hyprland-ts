@@ -8,3 +8,6 @@ export * from "./types.js";
 
 // Export validation utilities
 export * from "./validation.js";
+
+// Export socket discovery utilities
+export * from "./socket-discovery.js";
