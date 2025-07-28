@@ -1,10 +1,10 @@
 ---
 id: task-006
 title: Implement event subscription and handling system
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-07-26'
-updated_date: '2025-07-26'
+updated_date: '2025-07-28'
 labels:
   - events
   - ipc
