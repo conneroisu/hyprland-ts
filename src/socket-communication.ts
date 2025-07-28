@@ -18,10 +18,11 @@
  * @see {@link https://hyprland.org/} - Hyprland window manager
  */
 
-import { Socket, connect } from "node:net";
 import { EventEmitter } from "node:events";
-import { Mutex, RateLimiter, AtomicCounter, AtomicBoolean } from "./concurrency.js";
-import type { SocketType, IPCMessage, IPCRequest, IPCResponse, IPCEvent } from "./types.js";
+import type { Socket } from "node:net";
+import { connect } from "node:net";
+import { AtomicBoolean, AtomicCounter, Mutex, RateLimiter } from "./concurrency.js";
+import type { IPCEvent, IPCMessage, IPCRequest, IPCResponse, SocketType } from "./types.js";
 
 // ============================================================================
 // Constants and Configuration
@@ -72,13 +73,13 @@ const PROTOCOL = {
  * Tracks the current state of a socket connection for proper state management.
  */
 export enum ConnectionState {
-  DISCONNECTED = "disconnected",
-  CONNECTING = "connecting",
-  CONNECTED = "connected",
-  RECONNECTING = "reconnecting",
-  ERROR = "error",
-  CLOSING = "closing",
-  CLOSED = "closed",
+  Disconnected = "disconnected",
+  Connecting = "connecting",
+  Connected = "connected",
+  Reconnecting = "reconnecting",
+  Error = "error",
+  Closing = "closing",
+  Closed = "closed",
 }
 
 /**
@@ -169,14 +170,20 @@ interface PendingMessage {
  * Provides structured error information for socket-related failures.
  */
 export class SocketError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly socketPath?: string,
-    public readonly socketType?: SocketType
-  ) {
+  public readonly code: string;
+  public readonly socketPath?: string;
+  public readonly socketType?: SocketType;
+
+  constructor(message: string, code: string, socketPath?: string, socketType?: SocketType) {
     super(message);
     this.name = "SocketError";
+    this.code = code;
+    if (socketPath !== undefined) {
+      this.socketPath = socketPath;
+    }
+    if (socketType !== undefined) {
+      this.socketType = socketType;
+    }
   }
 }
 
@@ -233,7 +240,7 @@ export class BufferOverflowError extends SocketError {
  */
 export class SocketConnection extends EventEmitter {
   private socket: Socket | null = null;
-  private state: ConnectionState = ConnectionState.DISCONNECTED;
+  private state: ConnectionState = ConnectionState.Disconnected;
   private config: Required<SocketConnectionConfig>;
   private stats: MutableConnectionStats;
   private pendingMessages = new Map<string, PendingMessage>();
@@ -252,6 +259,9 @@ export class SocketConnection extends EventEmitter {
   private readonly messageCounter = new AtomicCounter();
   private readonly isClosing = new AtomicBoolean(false);
 
+  private readonly socketPath: string;
+  private readonly socketType: SocketType;
+
   /**
    * Creates a new socket connection instance.
    *
@@ -259,12 +269,11 @@ export class SocketConnection extends EventEmitter {
    * @param socketType - Type of socket (command or event)
    * @param config - Optional connection configuration
    */
-  constructor(
-    private readonly socketPath: string,
-    private readonly socketType: SocketType,
-    config: SocketConnectionConfig = {}
-  ) {
+  constructor(socketPath: string, socketType: SocketType, config: SocketConnectionConfig = {}) {
     super();
+
+    this.socketPath = socketPath;
+    this.socketType = socketType;
 
     this.config = {
       connectionTimeout: config.connectionTimeout ?? DEFAULT_CONFIG.connectionTimeout,
@@ -300,25 +309,25 @@ export class SocketConnection extends EventEmitter {
    * @throws {SocketError} For other connection failures
    */
   async connect(): Promise<void> {
-    if (this.state === ConnectionState.CONNECTED) {
+    if (this.state === ConnectionState.Connected) {
       return;
     }
 
-    if (this.state === ConnectionState.CONNECTING) {
+    if (this.state === ConnectionState.Connecting) {
       return new Promise((resolve, reject) => {
         this.once("connected", resolve);
         this.once("error", reject);
       });
     }
 
-    await this.setState(ConnectionState.CONNECTING);
+    await this.setState(ConnectionState.Connecting);
     this.connectionStartTime = Date.now();
 
     try {
       await this.establishConnection();
       this.retryCount = 0;
       this.stats.connectionsSuccessful++;
-      await this.setState(ConnectionState.CONNECTED);
+      await this.setState(ConnectionState.Connected);
       this.startKeepAlive();
       this.emit("connected");
     } catch (error) {
@@ -350,7 +359,7 @@ export class SocketConnection extends EventEmitter {
     await this.rateLimiter.acquire(1, this.config.messageTimeout);
 
     return this.messageMutex.withLock(async () => {
-      if (this.state !== ConnectionState.CONNECTED) {
+      if (this.state !== ConnectionState.Connected) {
         throw new SocketError(
           "Cannot send message: socket not connected",
           "NOT_CONNECTED",
@@ -445,25 +454,25 @@ export class SocketConnection extends EventEmitter {
       return; // Already closing
     }
 
-    if (this.state === ConnectionState.CLOSED || this.state === ConnectionState.CLOSING) {
+    if (this.state === ConnectionState.Closed || this.state === ConnectionState.Closing) {
       return;
     }
 
-    await this.setState(ConnectionState.CLOSING);
+    await this.setState(ConnectionState.Closing);
     this.cleanup();
 
     if (this.socket) {
       return new Promise((resolve) => {
         this.socket?.end(async () => {
-          await this.setState(ConnectionState.CLOSED);
+          await this.setState(ConnectionState.Closed);
           this.emit("closed");
           resolve();
         });
       });
-    } else {
-      await this.setState(ConnectionState.CLOSED);
-      this.emit("closed");
     }
+
+    await this.setState(ConnectionState.Closed);
+    this.emit("closed");
   }
 
   /**
@@ -496,7 +505,7 @@ export class SocketConnection extends EventEmitter {
    * @returns True if connected, false otherwise
    */
   isConnected(): boolean {
-    return this.state === ConnectionState.CONNECTED;
+    return this.state === ConnectionState.Connected;
   }
 
   // ============================================================================
@@ -665,7 +674,7 @@ export class SocketConnection extends EventEmitter {
    */
   private handleSocketError(error: Error): void {
     this.stats.lastError = error.message;
-    this.setState(ConnectionState.ERROR)
+    this.setState(ConnectionState.Error)
       .then(() => {
         if (this.listenerCount("error") > 0) {
           this.emit(
@@ -701,8 +710,8 @@ export class SocketConnection extends EventEmitter {
    * Handles socket close events.
    */
   private handleSocketClose(): void {
-    if (this.state !== ConnectionState.CLOSING) {
-      this.setState(ConnectionState.DISCONNECTED)
+    if (this.state !== ConnectionState.Closing) {
+      this.setState(ConnectionState.Disconnected)
         .then(() => {
           this.emit("disconnected");
           this.attemptReconnection().catch(() => {
@@ -727,7 +736,7 @@ export class SocketConnection extends EventEmitter {
    * Handles connection errors during the connection process.
    */
   private async handleConnectionError(error: unknown): Promise<void> {
-    await this.setState(ConnectionState.ERROR);
+    await this.setState(ConnectionState.Error);
     this.stats.lastError = error instanceof Error ? error.message : String(error);
 
     if (this.retryCount < this.config.maxRetries) {
@@ -749,12 +758,12 @@ export class SocketConnection extends EventEmitter {
       return; // Reconnection already scheduled
     }
 
-    await this.setState(ConnectionState.RECONNECTING);
+    await this.setState(ConnectionState.Reconnecting);
     this.stats.reconnectAttempts++;
     this.retryCount++;
 
     const delay = Math.min(
-      this.config.initialRetryDelay * Math.pow(2, this.retryCount - 1),
+      this.config.initialRetryDelay * 2 ** (this.retryCount - 1),
       this.config.maxRetryDelay
     );
 
@@ -813,7 +822,7 @@ export class SocketConnection extends EventEmitter {
     }
 
     this.keepAliveInterval = setInterval(() => {
-      if (this.state === ConnectionState.CONNECTED && this.socket) {
+      if (this.state === ConnectionState.Connected && this.socket) {
         // Send a ping message to keep the connection alive
         const pingMessage: IPCMessage = {
           type: "request",

@@ -11,16 +11,16 @@
  * - Performance characteristics
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { EventEmitter } from "node:events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  SocketConnectionPool,
+  AcquisitionTimeoutError,
   PoolError,
   PoolExhaustedError,
-  AcquisitionTimeoutError,
+  SocketConnectionPool,
   type SocketPoolConfig,
 } from "./socket-pool.js";
-import type { SocketType, IPCMessage, IPCRequest, IPCResponse } from "./types.js";
+import type { IPCMessage, IPCRequest, IPCResponse, SocketType } from "./types.js";
 
 // ============================================================================
 // Mock Setup
@@ -28,97 +28,111 @@ import type { SocketType, IPCMessage, IPCRequest, IPCResponse } from "./types.js
 
 // Mock the socket-communication module
 vi.mock("./socket-communication.js", () => {
-  const MockSocketConnection = vi.fn().mockImplementation((socketPath: string, socketType: string) => {
-    const mock = new EventEmitter();
-    return Object.assign(mock, {
-      socketPath,
-      socketType,
-      connected: false,
-      closed: false,
-      connectCalled: false,
-      closeCalled: false,
+  const MockSocketConnection = vi
+    .fn()
+    .mockImplementation((socketPath: string, socketType: string) => {
+      const mock = new EventEmitter();
+      return Object.assign(mock, {
+        socketPath,
+        socketType,
+        connected: false,
+        closed: false,
+        connectCalled: false,
+        closeCalled: false,
 
-      async connect() {
-        this.connectCalled = true;
-        if (!this.connected) {
-          this.connected = true;
-          process.nextTick(() => this.emit("connected"));
-        }
-      },
+        async connect() {
+          this.connectCalled = true;
+          if (!this.connected) {
+            this.connected = true;
+            process.nextTick(() => this.emit("connected"));
+          }
+        },
 
-      async sendMessage(message: any): Promise<void> {
-        if (!this.connected) {
-          throw new Error("Not connected");
-        }
-        return Promise.resolve();
-      },
+        async sendMessage(_message: unknown): Promise<void> {
+          if (!this.connected) {
+            throw new Error("Not connected");
+          }
+          return Promise.resolve();
+        },
 
-      async sendRequest(request: any): Promise<any> {
-        if (!this.connected) {
-          throw new Error("Not connected");
-        }
-        return {
-          type: "response",
-          payload: { success: true, data: "mock response" },
-          id: request.id,
-        };
-      },
+        async sendRequest(request: { id?: string }): Promise<{
+          type: string;
+          payload: { success: boolean; data: string };
+          id?: string;
+        }> {
+          if (!this.connected) {
+            throw new Error("Not connected");
+          }
+          return {
+            type: "response",
+            payload: { success: true, data: "mock response" },
+            id: request.id,
+          };
+        },
 
-      async close(): Promise<void> {
-        this.closeCalled = true;
-        if (!this.closed) {
-          this.closed = true;
+        async close(): Promise<void> {
+          this.closeCalled = true;
+          if (!this.closed) {
+            this.closed = true;
+            this.connected = false;
+            process.nextTick(() => this.emit("closed"));
+          }
+        },
+
+        getStats() {
+          return {
+            connectionsSuccessful: this.connected ? 1 : 0,
+            connectionsFailed: 0,
+            reconnectAttempts: 0,
+            messagesSent: 0,
+            messagesReceived: 0,
+            bytesSent: 0,
+            bytesReceived: 0,
+            state: this.connected ? "connected" : "disconnected",
+            uptime: 0,
+            averageRtt: 0,
+          };
+        },
+
+        getState() {
+          return this.connected ? "connected" : "disconnected";
+        },
+
+        isConnected(): boolean {
+          return this.connected;
+        },
+
+        // Test helper methods
+        simulateError(error: Error): void {
+          this.emit("error", error);
+        },
+
+        simulateDisconnect(): void {
           this.connected = false;
-          process.nextTick(() => this.emit("closed"));
-        }
-      },
-
-      getStats() {
-        return {
-          connectionsSuccessful: this.connected ? 1 : 0,
-          connectionsFailed: 0,
-          reconnectAttempts: 0,
-          messagesSent: 0,
-          messagesReceived: 0,
-          bytesSent: 0,
-          bytesReceived: 0,
-          state: this.connected ? "connected" : "disconnected",
-          uptime: 0,
-          averageRtt: 0,
-        };
-      },
-
-      getState() {
-        return this.connected ? "connected" : "disconnected";
-      },
-
-      isConnected(): boolean {
-        return this.connected;
-      },
-
-      // Test helper methods
-      simulateError(error: Error): void {
-        this.emit("error", error);
-      },
-
-      simulateDisconnect(): void {
-        this.connected = false;
-        this.emit("disconnected");
-      },
+          this.emit("disconnected");
+        },
+      });
     });
-  });
 
   const ConnectionState = {
-    DISCONNECTED: "disconnected",
-    CONNECTING: "connecting",
-    CONNECTED: "connected",
-    RECONNECTING: "reconnecting",
-    ERROR: "error",
-    CLOSING: "closing",
-    CLOSED: "closed",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Disconnected: "disconnected",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Connecting: "connecting",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Connected: "connected",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Reconnecting: "reconnecting",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Error: "error",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Closing: "closing",
+    /* biome-ignore lint/style/useNamingConvention: Mock enum must match actual enum values */
+    Closed: "closed",
   };
 
   return {
+    /* biome-ignore lint/style/useNamingConvention: Mock export must match actual export */
     SocketConnection: MockSocketConnection,
     ConnectionState,
   };
@@ -255,17 +269,19 @@ describe("SocketConnectionPool", () => {
 
       expect(connections).toHaveLength(3);
 
-      // Trying to acquire another should timeout
-      vi.useFakeTimers();
-      const acquisitionPromise = pool.acquire();
+      // Trying to acquire another should timeout - use real timers but with shorter timeout
+      const testPool = new SocketConnectionPool(TEST_SOCKET_PATH, TEST_SOCKET_TYPE, {
+        ...DEFAULT_POOL_CONFIG,
+        maxConnections: 1,
+        acquisitionTimeout: 50, // Very short timeout
+      });
 
-      // Fast-forward time to trigger timeout
-      vi.advanceTimersByTime(600);
-      await vi.runOnlyPendingTimersAsync();
-
-      await expect(acquisitionPromise).rejects.toThrow(AcquisitionTimeoutError);
-      
-      vi.useRealTimers();
+      try {
+        await testPool.acquire(); // Fill the pool
+        await expect(testPool.acquire()).rejects.toThrow(AcquisitionTimeoutError);
+      } finally {
+        await testPool.close(true);
+      }
     });
 
     it("should wait for available connection", async () => {
@@ -284,12 +300,14 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should handle concurrent acquisitions", async () => {
-      const acquisitions = Array.from({ length: 5 }, () => pool.acquire());
+      const acquisitions = Array.from({ length: 5 }, () => pool.acquire().catch((error) => error));
 
       const connections = await Promise.allSettled(acquisitions);
 
       // First 3 should succeed, last 2 should fail (due to pool limit)
-      const successful = connections.filter((result) => result.status === "fulfilled");
+      const successful = connections.filter(
+        (result) => result.status === "fulfilled" && !(result.value instanceof Error)
+      );
       expect(successful).toHaveLength(3);
     });
   });
@@ -316,7 +334,7 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should handle release of unknown connection", async () => {
-      const connection = await pool.acquire();
+      const _connection = await pool.acquire();
 
       // Create a fake connection that's not from the pool
       const fakeConnection = {
@@ -359,7 +377,7 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should execute function with acquired connection", async () => {
-      let connectionUsed: any = null;
+      let connectionUsed: unknown = null;
 
       const result = await pool.withConnection(async (connection) => {
         connectionUsed = connection;
@@ -418,7 +436,7 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should send request using pooled connection", async () => {
-      const request: any = {
+      const request: IPCRequest = {
         type: "request",
         payload: { command: "test", args: [] },
         id: "test-123",
@@ -479,13 +497,13 @@ describe("SocketConnectionPool", () => {
       const connection = await pool.acquire();
 
       // Simulate connection becoming unhealthy by making isConnected return false
-      vi.spyOn(connection.connection, 'isConnected').mockReturnValue(false);
+      vi.spyOn(connection.connection, "isConnected").mockReturnValue(false);
 
       pool.release(connection);
 
       // Fast-forward to trigger health check
       vi.advanceTimersByTime(150);
-      
+
       const stats = pool.getStats();
       // Connection might be removed or marked unhealthy - both are valid
       expect(stats.totalConnections).toBeGreaterThanOrEqual(0);
@@ -494,7 +512,7 @@ describe("SocketConnectionPool", () => {
     it("should maintain minimum connections", async () => {
       // Use real timers for this test to avoid infinite loops
       vi.useRealTimers();
-      
+
       const poolWithMin = new SocketConnectionPool(TEST_SOCKET_PATH, TEST_SOCKET_TYPE, {
         ...DEFAULT_POOL_CONFIG,
         minConnections: 2,
@@ -509,7 +527,7 @@ describe("SocketConnectionPool", () => {
       expect(stats.totalConnections).toBeGreaterThanOrEqual(2);
 
       await poolWithMin.close();
-      
+
       // Switch back to fake timers for other tests
       vi.useFakeTimers();
     });
@@ -526,7 +544,7 @@ describe("SocketConnectionPool", () => {
 
     it("should track pool statistics accurately", async () => {
       const connection1 = await pool.acquire();
-      const connection2 = await pool.acquire();
+      const _connection2 = await pool.acquire();
 
       let stats = pool.getStats();
       expect(stats.totalConnections).toBe(2);
@@ -542,7 +560,7 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should calculate utilization correctly", async () => {
-      const connections = await Promise.all([pool.acquire(), pool.acquire()]);
+      const _connections = await Promise.all([pool.acquire(), pool.acquire()]);
 
       const stats = pool.getStats();
       expect(stats.utilization).toBeCloseTo(66.67, 1); // 2/3 * 100
@@ -554,14 +572,14 @@ describe("SocketConnectionPool", () => {
       pool.release(connection1);
 
       // Second acquisition (hit)
-      const connection2 = await pool.acquire();
+      const _connection2 = await pool.acquire();
 
       const stats = pool.getStats();
       expect(stats.hitRate).toBe(1); // 2 successful / 2 total
     });
 
     it("should calculate average connection age", async () => {
-      const connection = await pool.acquire();
+      const _connection = await pool.acquire();
 
       // Wait a bit
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -591,7 +609,7 @@ describe("SocketConnectionPool", () => {
     });
 
     it("should force close pool immediately", async () => {
-      const connection = await pool.acquire();
+      const _connection = await pool.acquire();
 
       // Don't release - should be force closed
       await expect(pool.close(true)).resolves.toBeUndefined();
@@ -610,9 +628,9 @@ describe("SocketConnectionPool", () => {
       // Multiple close calls should not fail, but they might not all complete exactly the same way
       const closePromises = Array.from({ length: 3 }, () => pool.close());
       const results = await Promise.allSettled(closePromises);
-      
+
       // At least one should succeed, others might be rejected due to already being closed
-      const successful = results.filter(r => r.status === 'fulfilled');
+      const successful = results.filter((r) => r.status === "fulfilled");
       expect(successful.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -776,8 +794,12 @@ describe("SocketConnectionPool", () => {
 
     it("should handle connection that becomes unhealthy during use", async () => {
       // Create a dedicated pool for this test to avoid interference
-      const testPool = new SocketConnectionPool(TEST_SOCKET_PATH, TEST_SOCKET_TYPE, DEFAULT_POOL_CONFIG);
-      
+      const testPool = new SocketConnectionPool(
+        TEST_SOCKET_PATH,
+        TEST_SOCKET_TYPE,
+        DEFAULT_POOL_CONFIG
+      );
+
       try {
         const connection = await testPool.acquire();
 

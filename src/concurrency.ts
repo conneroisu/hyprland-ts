@@ -375,6 +375,8 @@ export class Semaphore {
  * Controls the rate of operations to prevent overwhelming resources.
  */
 export class RateLimiter {
+  private readonly capacity: number;
+  private readonly refillRate: number;
   private tokens: number;
   private lastRefill: number;
   private waitQueue: Array<{ resolve: () => void; tokens: number }> = [];
@@ -385,10 +387,9 @@ export class RateLimiter {
    * @param capacity - Maximum number of tokens
    * @param refillRate - Tokens per second to refill
    */
-  constructor(
-    private readonly capacity: number,
-    private readonly refillRate: number
-  ) {
+  constructor(capacity: number, refillRate: number) {
+    this.capacity = capacity;
+    this.refillRate = refillRate;
     this.tokens = capacity;
     this.lastRefill = Date.now();
   }
@@ -489,6 +490,20 @@ export class RateLimiter {
         break;
       }
     }
+  }
+
+  /**
+   * Gets the maximum token capacity.
+   */
+  getCapacity(): number {
+    return this.capacity;
+  }
+
+  /**
+   * Gets the token refill rate per second.
+   */
+  getRefillRate(): number {
+    return this.refillRate;
   }
 }
 

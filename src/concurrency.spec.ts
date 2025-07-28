@@ -10,17 +10,17 @@
  * - Utility functions for controlled concurrency
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AtomicBoolean,
+  AtomicCounter,
   Mutex,
+  RateLimiter,
   ReadWriteLock,
   Semaphore,
-  RateLimiter,
-  AtomicCounter,
-  AtomicBoolean,
-  withConcurrency,
   debounce,
   throttle,
+  withConcurrency,
 } from "./concurrency.js";
 
 // ============================================================================
@@ -529,18 +529,18 @@ describe("RateLimiter", () => {
     it("should limit request rate", async () => {
       // Simply test that we can acquire tokens up to capacity
       const capacity = 5;
-      
+
       // Should be able to acquire all available tokens immediately
       for (let i = 0; i < capacity; i++) {
         await rateLimiter.acquire(1);
       }
-      
+
       // Now we should have 0 tokens available
       expect(rateLimiter.availableTokens()).toBe(0);
-      
+
       // Wait a bit for refill
       await delay(150); // Allow 1-2 tokens to refill at 10/sec
-      
+
       // Should have some tokens available now
       expect(rateLimiter.availableTokens()).toBeGreaterThan(0);
     });
@@ -665,9 +665,8 @@ describe("AtomicCounter", () => {
       const operations = Array.from({ length: 50 }, (_, i) => {
         if (i % 2 === 0) {
           return counter.increment();
-        } else {
-          return counter.decrement();
         }
+        return counter.decrement();
       });
 
       await Promise.all(operations);
@@ -939,7 +938,7 @@ describe("Integration Tests", () => {
     const rwLock = new ReadWriteLock();
     const data = { value: 0 };
 
-    const readers = Array.from({ length: 5 }, async (_, i) => {
+    const readers = Array.from({ length: 5 }, async () => {
       return rwLock.withReadLock(async () => {
         await delay(10);
         return data.value;

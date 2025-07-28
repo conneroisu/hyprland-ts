@@ -18,7 +18,7 @@
 import { EventEmitter } from "node:events";
 import { AtomicBoolean } from "./concurrency.js";
 import { SocketConnection, type SocketConnectionConfig } from "./socket-communication.js";
-import type { SocketType, IPCMessage, IPCRequest, IPCResponse, IPCEvent } from "./types.js";
+import type { IPCEvent, IPCMessage, IPCRequest, IPCResponse, SocketType } from "./types.js";
 
 // ============================================================================
 // Constants and Configuration
@@ -129,13 +129,16 @@ export interface PoolStats {
  * Base pool error class.
  */
 export class PoolError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly poolId?: string
-  ) {
+  public readonly code: string;
+  public readonly poolId?: string;
+
+  constructor(message: string, code: string, poolId?: string) {
     super(message);
     this.name = "PoolError";
+    this.code = code;
+    if (poolId !== undefined) {
+      this.poolId = poolId;
+    }
   }
 }
 
@@ -188,6 +191,9 @@ export class SocketConnectionPool extends EventEmitter {
   // Concurrency safety primitives
   private readonly isClosing = new AtomicBoolean(false);
 
+  private readonly socketPath: string;
+  private readonly socketType: SocketType;
+
   /**
    * Creates a new socket connection pool.
    *
@@ -195,12 +201,11 @@ export class SocketConnectionPool extends EventEmitter {
    * @param socketType - Type of socket (command or event)
    * @param config - Pool configuration options
    */
-  constructor(
-    private readonly socketPath: string,
-    private readonly socketType: SocketType,
-    config: SocketPoolConfig = {}
-  ) {
+  constructor(socketPath: string, socketType: SocketType, config: SocketPoolConfig = {}) {
     super();
+
+    this.socketPath = socketPath;
+    this.socketType = socketType;
 
     this.config = {
       minConnections: config.minConnections ?? DEFAULT_POOL_CONFIG.minConnections,
@@ -427,7 +432,7 @@ export class SocketConnectionPool extends EventEmitter {
           // Wait for graceful close
           await pooledConnection.connection.close();
         }
-      } catch (error) {
+      } catch {
         // Ignore errors during cleanup
       }
     });

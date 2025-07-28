@@ -5,6 +5,7 @@
 
 import type {
   HyprlandEvent,
+  HyprlandEventData,
   HyprlandMonitor,
   HyprlandWindow,
   HyprlandWorkspace,
@@ -449,4 +450,32 @@ export const validateHyprlandMonitorArray = (
   }
 
   return createSuccessResult(validatedMonitors as readonly HyprlandMonitor[]);
+};
+
+/** Validate HyprlandEvent with detailed error reporting */
+export const validateEvent = (value: unknown): ValidationResult<HyprlandEventData> => {
+  const errors: string[] = [];
+
+  if (!isObject(value)) {
+    return createFailureResult(["Value must be an object"]);
+  }
+
+  if (!isString(value["event"])) {
+    errors.push("event must be a string");
+  }
+
+  if (value["data"] === undefined) {
+    errors.push("data must be defined");
+  }
+
+  if (errors.length > 0) {
+    return createFailureResult(errors);
+  }
+
+  return createSuccessResult(value as unknown as HyprlandEventData);
+};
+
+/** Validate HyprlandEventData with detailed error reporting */
+export const validateEventData = (value: unknown): ValidationResult<HyprlandEventData> => {
+  return validateEvent(value);
 };
