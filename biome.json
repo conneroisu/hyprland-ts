@@ -9,7 +9,12 @@
       "recommended": true,
       "complexity": {
         "noBannedTypes": "error",
-        "noExcessiveCognitiveComplexity": "error",
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 25
+          }
+        },
         "noExtraBooleanCast": "error",
         "noMultipleSpacesInRegularExpressionLiterals": "error",
         "noUselessCatch": "error",
@@ -19,7 +24,7 @@
         "noUselessTernary": "error",
         "noVoid": "error",
         "noWith": "error",
-        "useLiteralKeys": "error",
+        "useLiteralKeys": "off",
         "useOptionalChain": "error",
         "useRegexLiterals": "error"
       },
@@ -67,7 +72,7 @@
         "noUselessElse": "error",
         "noVar": "error",
         "useAsConstAssertion": "error",
-        "useBlockStatements": "error",
+        "useBlockStatements": "off",
         "useCollapsedElseIf": "error",
         "useConst": "error",
         "useDefaultParameterLast": "error",
@@ -75,7 +80,12 @@
         "useExponentiationOperator": "error",
         "useFragmentSyntax": "error",
         "useLiteralEnumMembers": "error",
-        "useNamingConvention": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "strictCase": false
+          }
+        },
         "useNodejsImportProtocol": "error",
         "useNumberNamespace": "error",
         "useNumericLiterals": "error",
