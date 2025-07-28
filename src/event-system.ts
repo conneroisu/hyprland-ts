@@ -108,11 +108,11 @@ export interface EventMetadata {
 /**
  * Configuration options for event subscriptions.
  */
-export interface EventSubscriptionOptions {
+export interface EventSubscriptionOptions<T extends HyprlandEventData = HyprlandEventData> {
   /** Event filter predicate */
-  readonly filter?: EventPredicate;
+  readonly filter?: EventPredicate<T>;
   /** Event transformer function */
-  readonly transform?: EventTransformer;
+  readonly transform?: EventTransformer<T>;
   /** Whether to receive events during replay */
   readonly includeReplay?: boolean;
   /** Maximum number of events to buffer for this subscription */
@@ -943,7 +943,7 @@ export class HyprlandEventSystem extends EventEmitter {
       // Clean old events from replay buffer
       const cutoffTime = now - maxAge;
       let removed = 0;
-      while (this.replayBuffer.length > 0 && this.replayBuffer[0]!.receivedAt < cutoffTime) {
+      while (this.replayBuffer.length > 0 && (this.replayBuffer[0]?.receivedAt ?? 0) < cutoffTime) {
         this.replayBuffer.shift();
         removed++;
       }

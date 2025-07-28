@@ -7,7 +7,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { HyprlandEventSystem } from "./event-system.js";
+import { type EventMetadata, HyprlandEventSystem } from "./event-system.js";
 import { discoverSockets as discoverHyprlandSockets } from "./socket-discovery.js";
 import type { HyprlandEventData, SocketInfo } from "./types.js";
 
@@ -31,12 +31,18 @@ const TEST_CONFIG = {
  * Helper class for managing test lifecycle and event collection.
  */
 class EventTestHelper {
+  private readonly socketInfo: SocketInfo;
   private eventSystem: HyprlandEventSystem | null = null;
-  private collectedEvents: Array<{ event: HyprlandEventData; metadata: any }> = [];
-  private eventPromises: Array<{ resolve: Function; reject: Function; timeout: NodeJS.Timeout }> =
-    [];
+  private collectedEvents: Array<{ event: HyprlandEventData; metadata: EventMetadata }> = [];
+  private eventPromises: Array<{
+    resolve: (value: { event: HyprlandEventData; metadata: EventMetadata }) => void;
+    reject: (reason?: unknown) => void;
+    timeout: NodeJS.Timeout;
+  }> = [];
 
-  constructor(private socketInfo: SocketInfo) {}
+  constructor(socketInfo: SocketInfo) {
+    this.socketInfo = socketInfo;
+  }
 
   /**
    * Sets up the event system for testing.
@@ -56,10 +62,10 @@ class EventTestHelper {
    */
   async cleanup(): Promise<void> {
     // Cancel any pending event promises
-    this.eventPromises.forEach(({ reject, timeout }) => {
+    for (const { reject, timeout } of this.eventPromises) {
       clearTimeout(timeout);
       reject(new Error("Test cleanup"));
-    });
+    }
     this.eventPromises = [];
 
     if (this.eventSystem) {
@@ -116,9 +122,9 @@ class EventTestHelper {
    * Waits for an event matching a specific predicate.
    */
   async waitForEvent(
-    predicate: (event: HyprlandEventData, metadata: any) => boolean,
+    predicate: (event: HyprlandEventData, metadata: EventMetadata) => boolean,
     timeout: number = TEST_CONFIG.eventTimeout
-  ): Promise<{ event: HyprlandEventData; metadata: any }> {
+  ): Promise<{ event: HyprlandEventData; metadata: EventMetadata }> {
     return new Promise((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
         reject(new Error("Timeout waiting for matching event"));
@@ -150,7 +156,7 @@ class EventTestHelper {
   /**
    * Gets the collected events.
    */
-  getCollectedEvents(): Array<{ event: HyprlandEventData; metadata: any }> {
+  getCollectedEvents(): Array<{ event: HyprlandEventData; metadata: EventMetadata }> {
     return [...this.collectedEvents];
   }
 
@@ -236,10 +242,10 @@ describe("HyprlandEventSystem Integration Tests", () => {
       }
 
       const eventSystem = testHelper.getEventSystem();
-      let reconnectionCount = 0;
+      let _reconnectionCount = 0;
 
       eventSystem.on("reconnecting", () => {
-        reconnectionCount++;
+        _reconnectionCount++;
       });
 
       // Force a disconnection by closing the connection
@@ -273,15 +279,15 @@ describe("HyprlandEventSystem Integration Tests", () => {
         expect(events.length).toBeGreaterThan(0);
 
         // Validate event structure
-        events.forEach(({ event, metadata }) => {
+        for (const { event, metadata } of events) {
           expect(event).toHaveProperty("event");
           expect(event).toHaveProperty("data");
           expect(metadata).toHaveProperty("id");
           expect(metadata).toHaveProperty("sequence");
           expect(metadata).toHaveProperty("receivedAt");
           expect(metadata).toHaveProperty("source");
-        });
-      } catch (error) {
+        }
+      } catch (_error) {
         console.log("No events received - this is expected in inactive Hyprland sessions");
         // This is acceptable as there might not be any events in a test environment
       }
@@ -305,7 +311,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
 
         expect(workspaceEvent.event.event).toMatch(/^workspace/);
         expect(workspaceEvent.metadata).toHaveProperty("sequence");
-      } catch (error) {
+      } catch (_error) {
         console.log("No workspace events received - this is acceptable in test environments");
       }
     });
@@ -319,7 +325,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
       const sequences: number[] = [];
       const eventSystem = testHelper.getEventSystem();
 
-      await eventSystem.subscribe("*", (event, metadata) => {
+      await eventSystem.subscribe("*", (_event, metadata) => {
         sequences.push(metadata.sequence);
       });
 
@@ -331,7 +337,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
         for (let i = 1; i < sequences.length; i++) {
           expect(sequences[i]).toBeGreaterThan(sequences[i - 1]);
         }
-      } catch (error) {
+      } catch (_error) {
         console.log("Not enough events for ordering test - skipping");
       }
     });
@@ -351,7 +357,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
       // Subscribe with filter
       await eventSystem.subscribe(
         "*",
-        (event) => {
+        (_event) => {
           filteredCount++;
         },
         {
@@ -360,7 +366,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
       );
 
       // Subscribe to all events to count total
-      await eventSystem.subscribe("*", (event) => {
+      await eventSystem.subscribe("*", (_event) => {
         totalCount++;
       });
 
@@ -369,7 +375,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
 
         // Filtered count should be <= total count
         expect(filteredCount).toBeLessThanOrEqual(totalCount);
-      } catch (error) {
+      } catch (_error) {
         console.log("Not enough events for filtering test - skipping");
       }
     });
@@ -380,7 +386,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
         return;
       }
 
-      const transformedEvents: any[] = [];
+      const transformedEvents: HyprlandEventData[] = [];
       const eventSystem = testHelper.getEventSystem();
 
       await eventSystem.subscribe(
@@ -401,7 +407,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
 
         expect(transformedEvents.length).toBeGreaterThan(0);
         expect(transformedEvents[0].data).toMatch(/^transformed-/);
-      } catch (error) {
+      } catch (_error) {
         console.log("No events for transformation test - skipping");
       }
     });
@@ -418,7 +424,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
       let processedCount = 0;
       const startTime = Date.now();
 
-      await eventSystem.subscribe("*", (event) => {
+      await eventSystem.subscribe("*", (_event) => {
         processedCount++;
       });
 
@@ -437,7 +443,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
         // Basic performance check - should be able to handle at least some events
         const stats = eventSystem.getStats();
         expect(stats.averageProcessingTime).toBeLessThan(100); // Less than 100ms per event
-      } catch (error) {
+      } catch (_error) {
         console.log("Performance test skipped - no events available");
       }
     });
@@ -466,7 +472,7 @@ describe("HyprlandEventSystem Integration Tests", () => {
 
         // All received events should be processed
         expect(stats.eventsProcessed).toBe(stats.eventsReceived);
-      } catch (error) {
+      } catch (_error) {
         console.log("Load test skipped - not enough events available");
       }
     });
@@ -506,7 +512,9 @@ describe("HyprlandEventSystem Integration Tests", () => {
       eventSystem.on("error", () => errorCount++);
 
       // Subscribe to events
-      await eventSystem.subscribe("*", () => {});
+      await eventSystem.subscribe("*", () => {
+        // No-op handler for reliability testing
+      });
 
       // Wait for some processing
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -525,9 +533,11 @@ describe("HyprlandEventSystem Integration Tests", () => {
       }
 
       const eventSystem = testHelper.getEventSystem();
-      const initialStats = eventSystem.getStats();
+      const _initialStats = eventSystem.getStats();
 
-      await eventSystem.subscribe("*", () => {});
+      await eventSystem.subscribe("*", () => {
+        // No-op handler for performance testing
+      });
 
       // Let events flow for a while
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -551,7 +561,9 @@ describe("HyprlandEventSystem Integration Tests", () => {
 
       // Create multiple subscriptions
       for (let i = 0; i < 5; i++) {
-        await eventSystem.subscribe(`event-${i}`, () => {});
+        await eventSystem.subscribe(`event-${i}`, () => {
+          // No-op handler for multiple subscription testing
+        });
       }
 
       const beforeStats = eventSystem.getStats();
@@ -613,7 +625,7 @@ describe("HyprlandEventSystem Performance Benchmarks", () => {
     const eventSystem = testHelper.getEventSystem();
     const latencies: number[] = [];
 
-    await eventSystem.subscribe("*", (event, metadata) => {
+    await eventSystem.subscribe("*", (_event, metadata) => {
       const latency = Date.now() - metadata.receivedAt;
       latencies.push(latency);
     });
@@ -636,7 +648,7 @@ describe("HyprlandEventSystem Performance Benchmarks", () => {
         expect(avgLatency).toBeLessThan(50); // Average latency should be < 50ms
         expect(maxLatency).toBeLessThan(200); // Max latency should be < 200ms
       }
-    } catch (error) {
+    } catch (_error) {
       console.log("Latency benchmark skipped - not enough events");
     }
   });

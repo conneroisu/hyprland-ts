@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,6 +15,7 @@
     self,
     nixpkgs,
     flake-utils,
+    treefmt-nix,
     rust-overlay,
   }:
     flake-utils.lib.eachSystem ["x86_64-linux" "aarch64-linux" "aarch64-darwin"] (
@@ -112,16 +114,6 @@
             deps = [rustToolchain];
             description = "Run Rust service";
           };
-          format = {
-            exec = rooted ''
-              cd "$REPO_ROOT"
-              cargo fmt
-              ruff format .
-              alejandra "$REPO_ROOT"/flake.nix
-            '';
-            deps = with pkgs; [alejandra ruff] ++ [rustToolchain];
-            description = "Format all code";
-          };
         };
 
         scriptPackages =
@@ -206,6 +198,16 @@
         packages = {
           # Add custom packages here
         };
+
+        formatter =
+          (treefmt-nix.lib.evalModule pkgs {
+            projectRootFile = "flake.nix";
+            programs = {
+              alejandra.enable = true;
+              rustfmt.enable = true;
+              ruff.enable = true;
+            };
+          }).config.build.wrapper;
       }
     );
 }

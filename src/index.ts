@@ -32,3 +32,6 @@ export * from "./hyprctl-version.js";
 
 // Export event subscription and handling system
 export * from "./event-system.js";
+
+// Export main unified HyprlandClient
+export * from "./hyprland-client.js";
